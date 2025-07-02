@@ -1,0 +1,60 @@
+---
+- name: Build and install srsRAN 4G
+  hosts: localhost
+  become: true
+  vars:
+    install_path: "{{ install_path }}"
+    install_user: "{{ install_user }}"
+    debug_mode: false
+
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Install required packages for srsRAN 4G
+      apt:
+        name:
+          - build-essential
+          - cmake
+          - libfftw3-dev
+          - libmbedtls-dev
+          - libboost-program-options-dev
+          - libconfig++-dev
+          - libsctp-dev
+          - git
+        state: present
+
+    - name: Create install directory
+      file:
+        path: "{{ install_path }}"
+        state: directory
+        owner: "{{ install_user }}"
+        group: "{{ install_user }}"
+
+    - name: Clone srsRAN 4G repository
+      git:
+        repo: "https://github.com/srsRAN/srsRAN_4G.git"
+        dest: "{{ install_path }}/srsRAN_4G"
+        clone: yes
+
+    - name: Create build directory
+      file:
+        path: "{{ install_path }}/srsRAN_4G/build"
+        state: directory
+        owner: "{{ install_user }}"
+        group: "{{ install_user }}"
+
+    - name: Run CMake configuration
+      command: cmake ..
+      args:
+        chdir: "{{ install_path }}/srsRAN_4G/build"
+
+    - name: Build srsRAN 4G
+      command: make -j"{{ ansible_processor_vcpus | default(2) }}"
+      args:
+        chdir: "{{ install_path }}/srsRAN_4G/build"
+
+    - name: Update shared libraries cache
+      command: ldconfig
